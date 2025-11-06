@@ -2054,7 +2054,7 @@ def customer_groups(request: HttpRequest):
     # Calculate active customers this month (customers with orders in the last 30 days)
     one_month_ago = timezone.now() - timedelta(days=30)
     active_customers_this_month = scope_queryset(Customer.objects.all(), request.user, request).filter(
-        orders__created_at__gte=one_month_ago
+        last_visit__gte=one_month_ago
     ).distinct().count()
     
     # Customer type groups with detailed analytics
