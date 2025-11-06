@@ -1060,7 +1060,7 @@
   const overrunTextarea = document.getElementById('completeOverrunReason');
   const overrunError = document.getElementById('completeOverrunError');
 
-  const startedAtStr = '{{ order.started_at.isoformat if order.started_at else "" }}';
+  const startedAtStr = '{{ order.started_at|date:"c" }}';
   const estimatedDuration = {{ order.estimated_duration|default:'null' }};
 
   function needsOverrun(){
