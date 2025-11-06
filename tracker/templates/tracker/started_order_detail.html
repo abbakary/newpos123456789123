@@ -99,16 +99,37 @@
                   {% csrf_token %}
                   <input type="hidden" name="action" value="update_order_details">
                   <div class="modal-body">
-                    <div class="mb-3">
+                    <!-- Item Selection for Sales Orders -->
+                    <div id="itemSelectionSection" class="mb-3" style="display:none;">
+                      <label class="form-label fw-bold">Select Item</label>
+                      <select id="editOrderItemSelect" name="item_id" class="form-select mb-2">
+                        <option value="">Loading items...</option>
+                      </select>
+                      <div class="row g-2">
+                        <div class="col-md-6">
+                          <label class="form-label">Brand</label>
+                          <input type="text" id="editOrderBrand" name="item_brand" class="form-control" readonly>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label">Quantity</label>
+                          <input type="number" id="editOrderQuantity" name="item_quantity" class="form-control" value="1" min="1">
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Services/Add-ons Section -->
+                    <div id="servicesAddonsSection" class="mb-3">
                       <label class="form-label fw-bold" id="editOrderOptionsLabel">Select Services</label>
                       <div id="orderServicesContainer" class="row g-2">Loading services...</div>
                       <div class="small text-muted mt-2" id="editOrderEtaHint" style="display:none;"></div>
                     </div>
+
+                    <!-- Duration -->
                     <div class="mb-3">
                       <label class="form-label fw-bold">Estimated Duration (minutes)</label>
                       <input type="number" name="estimated_duration" id="orderEstimatedDuration" class="form-control" value="{{ order.estimated_duration|default:'' }}" min="0">
                     </div>
-                    <div class="mb-2 text-muted small">Selected services will be appended to the order description for quick reference.</div>
+                    <div class="mb-2 text-muted small" id="editOrderHelpText">Selected services will be appended to the order description for quick reference.</div>
                   </div>
                   <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
