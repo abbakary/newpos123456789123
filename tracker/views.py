@@ -318,10 +318,10 @@ def dashboard(request: HttpRequest):
         # Count of out of stock items
         out_of_stock_count = InventoryItem.objects.filter(quantity=0).count()
         
-        # Revenue aggregation from Invoices and Payments (prefer Invoice records over raw document extractions)
+        # Revenue aggregation from Invoices and Payments
         from decimal import Decimal
         from django.db.models import Sum
-        from tracker.models import Invoice, InvoicePayment, DocumentExtraction
+        from tracker.models import Invoice, InvoicePayment
 
         total_revenue = Decimal('0')  # Cash received (payments)
         revenue_this_month = Decimal('0')  # Payments this month
