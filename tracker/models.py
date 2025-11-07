@@ -707,9 +707,18 @@ class Invoice(models.Model):
         return f"Invoice {self.invoice_number} - {self.customer.full_name}"
 
     def calculate_totals(self):
-        """Recalculate totals from line items"""
-        self.subtotal = sum(item.line_total for item in self.line_items.all())
-        self.tax_amount = self.subtotal * (self.tax_rate / 100) if self.tax_rate else 0
+        """Recalculate totals from line items, considering per-item VAT"""
+        line_items = self.line_items.all()
+
+        # Calculate subtotal from all line items
+        self.subtotal = sum(Decimal(str(item.line_total)) for item in line_items) if line_items.exists() else Decimal('0')
+
+        # Calculate tax: sum of per-item taxes + invoice-level tax on subtotal
+        per_item_tax = sum(Decimal(str(item.tax_amount)) for item in line_items) if line_items.exists() else Decimal('0')
+        invoice_level_tax = self.subtotal * (Decimal(str(self.tax_rate)) / 100) if self.tax_rate else Decimal('0')
+        self.tax_amount = per_item_tax + invoice_level_tax
+
+        # Calculate total
         self.total_amount = self.subtotal + self.tax_amount
         return self
 
