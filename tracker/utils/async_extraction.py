@@ -122,6 +122,9 @@ def _extract_document_worker(document_scan_id):
                             unit = it.get('unit') or it.get('type')
                             rate = it.get('rate')
                             value = it.get('value')
+                            net_val = it.get('net_value')
+                            vat_val = it.get('vat')
+                            gross_val = it.get('gross_value')
 
                             def _to_decimal(v):
                                 try:
@@ -137,6 +140,9 @@ def _extract_document_worker(document_scan_id):
                             qty_d = _to_decimal(qty)
                             rate_d = _to_decimal(rate)
                             value_d = _to_decimal(value)
+                            net_d = _to_decimal(net_val)
+                            vat_d = _to_decimal(vat_val)
+                            gross_d = _to_decimal(gross_val)
 
                             DocumentExtractionItem.objects.create(
                                 extraction=extraction,
@@ -147,6 +153,9 @@ def _extract_document_worker(document_scan_id):
                                 unit=unit,
                                 rate=rate_d,
                                 value=value_d,
+                                net_value=net_d,
+                                vat=vat_d,
+                                gross_value=gross_d,
                             )
                 except Exception as e:
                     logger.warning(f"Failed to save extracted items: {e}")
