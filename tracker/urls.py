@@ -145,6 +145,8 @@ urlpatterns = [
     path("api/documents/upload/", views_documents.upload_document, name="api_documents_upload"),
     path("api/documents/<int:doc_id>/status/", views_documents.get_document_status, name="api_documents_status"),
     path("api/documents/create-order/", views_documents.create_order_from_document, name="api_documents_create_order"),
+    path("api/extractions/get/", views_documents.api_get_extraction, name="api_get_extraction"),
+    path("api/invoices/create-from-extraction/", views_documents.api_create_invoice_from_extraction, name="api_create_invoice_from_extraction"),
 
     # Start Order and Started Orders Dashboard
     path("api/orders/start/", views_start_order.api_start_order, name="api_start_order"),
