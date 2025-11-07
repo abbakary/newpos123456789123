@@ -2578,14 +2578,17 @@ def customer_groups_data(request: HttpRequest):
 
 @login_required
 def orders_list(request: HttpRequest):
-    from django.db.models import Q, Sum
+    from django.db.models import Q, Sum, Count
 
     # Persist overdue statuses before listing
     _mark_overdue_orders(hours=24)
 
     # Get timezone from cookie or use default
     tzname = request.COOKIES.get('django_timezone')
-    
+
+    # Get the view mode from GET parameter (regular or started)
+    view_mode = request.GET.get("view", "regular")
+
     status = request.GET.get("status", "all")
     type_filter = request.GET.get("type", "all")
     priority = request.GET.get("priority", "")
@@ -2640,12 +2643,40 @@ def orders_list(request: HttpRequest):
     overdue_count = base_orders_qs.filter(status="overdue").count()
     revenue_today = 0
 
-    paginator = Paginator(orders, 20)
-    page = request.GET.get('page')
-    orders = paginator.get_page(page)
+    # Get started orders KPIs (for the Started Orders view)
+    started_orders_qs = scope_queryset(Order.objects.filter(status='created'), request.user, request)
+    started_total = started_orders_qs.count()
+    started_pending = started_orders_qs.filter(status='created').count()
+    started_completed = started_orders_qs.filter(status='completed').count()
+
+    # Calculate documents uploaded (document_scans count)
+    documents_uploaded = 0
+    try:
+        from .models import DocumentScan
+        documents_uploaded = DocumentScan.objects.filter(
+            order__in=started_orders_qs
+        ).count()
+    except Exception:
+        pass
+
+    # Fetch started orders if view mode is 'started'
+    started_orders = []
+    if view_mode == "started":
+        started_orders_list = started_orders_qs.select_related("customer", "vehicle").order_by("-started_at")
+        paginator = Paginator(started_orders_list, 20)
+        page = request.GET.get('page')
+        started_orders = paginator.get_page(page)
+    else:
+        # For regular view, paginate regular orders
+        paginator = Paginator(orders, 20)
+        page = request.GET.get('page')
+        orders = paginator.get_page(page)
+
     branches = list(Branch.objects.filter(is_active=True).order_by('name').values_list('name', flat=True))
     return render(request, "tracker/orders_list.html", {
         "orders": orders,
+        "started_orders": started_orders,
+        "order_view_mode": view_mode,
         "status": status,
         "type": type_filter,
         "total_orders": total_orders,
@@ -2655,6 +2686,10 @@ def orders_list(request: HttpRequest):
         "urgent_orders": urgent_orders,
         "overdue_count": overdue_count,
         "revenue_today": revenue_today,
+        "started_total": started_total,
+        "started_pending": started_pending,
+        "started_completed": started_completed,
+        "documents_uploaded": documents_uploaded,
         "branches": branches,
     })
     # Support GET ?customer=<id> to go straight into order form for that customer

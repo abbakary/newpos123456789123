@@ -399,6 +399,79 @@ def invoice_pdf(request, pk):
 
 
 @login_required
+@require_http_methods(["POST"])
+def api_upload_and_extract_invoice(request):
+    """
+    API endpoint to upload an invoice file (PDF or image) and extract data using OCR.
+
+    POST parameters:
+    - invoice_file: File upload field with PDF or image
+
+    Returns JSON with extracted invoice data:
+    - customer_name
+    - customer_phone
+    - customer_address
+    - reference
+    - items (array with description, qty, unit, price)
+    - subtotal
+    - tax_amount
+    - total_amount
+    """
+    try:
+        if 'invoice_file' not in request.FILES:
+            return JsonResponse({
+                'success': False,
+                'error': 'No file uploaded. Please select an invoice file (PDF or image).'
+            }, status=400)
+
+        uploaded_file = request.FILES['invoice_file']
+
+        # Validate file size (max 10MB)
+        max_size = 10 * 1024 * 1024
+        if uploaded_file.size > max_size:
+            return JsonResponse({
+                'success': False,
+                'error': 'File size exceeds 10MB limit.'
+            }, status=400)
+
+        # Validate file extension
+        allowed_extensions = ['.pdf', '.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff']
+        file_ext = uploaded_file.name.split('.')[-1].lower()
+        if f'.{file_ext}' not in allowed_extensions:
+            return JsonResponse({
+                'success': False,
+                'error': f'Unsupported file type. Allowed types: {", ".join(allowed_extensions)}'
+            }, status=400)
+
+        # Reset file pointer to beginning
+        uploaded_file.seek(0)
+
+        # Process the file using OCR
+        from .utils.invoice_ocr import process_uploaded_invoice_file
+
+        result = process_uploaded_invoice_file(uploaded_file)
+
+        if result['success']:
+            return JsonResponse({
+                'success': True,
+                'message': 'Invoice processed successfully',
+                'data': result['data']
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': result.get('error', 'Failed to extract data from invoice')
+            }, status=400)
+
+    except Exception as e:
+        logger.error(f"Error in api_upload_and_extract_invoice: {e}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': f'Error processing invoice: {str(e)}'
+        }, status=500)
+
+
+@login_required
 @require_http_methods(["GET"])
 def api_inventory_for_invoice(request):
     """API endpoint to fetch inventory items for invoice line items"""
