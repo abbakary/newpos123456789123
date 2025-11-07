@@ -327,13 +327,10 @@
     </div>
   </div>
 
-  <!-- Orders Table -->
-  <div class="card shadow-sm">
+  <!-- Orders Table - Regular Orders -->
+  <div id="regularOrdersTable" class="card shadow-sm" style="{% if order_view_mode == 'started' %}display: none;{% endif %}">
     <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
       <h5 class="card-title mb-0"><i class="fa fa-list me-2"></i>Orders List</h5>
-      <a href="{% url 'tracker:order_start' %}" class="btn btn-primary btn-sm">
-        <i class="fa fa-plus me-1"></i> New Order
-      </a>
     </div>
     <div class="card-body p-0">
       <div class="table-responsive">
