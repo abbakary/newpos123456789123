@@ -87,25 +87,45 @@ class InvoiceDataExtractor:
             logger.error(f"Error extracting text: {e}")
             return ""
 
+    def _correct_image_orientation(self, img: Image.Image) -> Image.Image:
+        """Try to detect orientation using tesseract OSD and rotate image to upright.
+
+        If detection fails, return the original image.
+        """
+        try:
+            osd = pytesseract.image_to_osd(img)
+            import re
+            m = re.search(r'Rotate:\s*([0-9]+)', osd)
+            if not m:
+                m = re.search(r'Orientation in degrees:\s*([0-9]+)', osd)
+            if m:
+                angle = int(m.group(1)) % 360
+                if angle != 0:
+                    # Rotate by negative angle to deskew to upright
+                    return img.rotate(-angle, expand=True)
+        except Exception:
+            # If anything goes wrong, don't fail
+            pass
+        return img
+
     def _extract_text_from_pdf(self) -> str:
         """Extract text from PDF using PyMuPDF.
 
-        Be defensive about reading the uploaded file-like object because some
-        file wrappers may behave differently (e.g. TemporaryUploadedFile).
+        Strategy:
+        - Try to extract text with PyMuPDF's get_text() (fast).
+        - If extracted text looks empty or too short, rasterize each page and
+          run OCR (pytesseract) on the rendered image. This handles scanned
+          PDFs and rotated pages consistently.
         """
         try:
             if self.file_obj:
-                # Ensure we're at the start of the file-like stream
                 try:
                     self.file_obj.seek(0)
                 except Exception:
                     pass
-
                 pdf_bytes = self.file_obj.read()
                 if not pdf_bytes:
                     raise ValueError("Uploaded PDF file appears empty after reading")
-
-                # fitz.open expects bytes-like stream for PDFs
                 doc = fitz.open(stream=pdf_bytes, filetype="pdf")
             else:
                 doc = fitz.open(self.file_path)
@@ -117,7 +137,24 @@ class InvoiceDataExtractor:
                     text = page.get_text()
                 except Exception:
                     text = ""
-                full_text += f"\n--- Page {page_num + 1} ---\n{text}"
+
+                # If extracted text is short, fallback to raster OCR for this page
+                if not text or len(text.strip()) < 80:
+                    try:
+                        # Render page to an image at higher resolution
+                        pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+                        mode = "RGB" if pix.n < 4 else "RGBA"
+                        img = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
+                        # Correct orientation via OSD
+                        img = self._correct_image_orientation(img)
+                        page_text = pytesseract.image_to_string(img, lang='eng')
+                    except Exception as e:
+                        logger.debug(f"PDF page raster OCR failed: {e}")
+                        page_text = text or ""
+                else:
+                    page_text = text
+
+                full_text += f"\n--- Page {page_num + 1} ---\n{page_text}"
 
             try:
                 doc.close()
@@ -133,7 +170,8 @@ class InvoiceDataExtractor:
         """Extract text from image using pytesseract.
 
         Read the uploaded file safely into a BytesIO to avoid issues with
-        file-like wrappers that don't behave like regular file objects.
+        file-like wrappers that don't behave like regular file objects. Detect
+        and fix orientation before OCR to avoid vertical/rotated text issues.
         """
         try:
             if self.file_obj:
@@ -147,6 +185,12 @@ class InvoiceDataExtractor:
                 img = Image.open(BytesIO(raw))
             else:
                 img = Image.open(self.file_path)
+
+            # Correct orientation using OSD if possible
+            try:
+                img = self._correct_image_orientation(img)
+            except Exception:
+                pass
 
             # Enhance image for better OCR
             img = img.convert('RGB')
@@ -266,39 +310,73 @@ class InvoiceDataExtractor:
         return None
 
     def _extract_items(self, text: str, lines: list) -> list:
-        """Extract line items from invoice."""
+        """Extract line items from invoice using flexible heuristics.
+
+        The original strict regex often misses items in various formats. This
+        implementation looks for amounts in each line and treats the last
+        numeric amount as the line total, the preceding numeric as unit price or qty
+        depending on context. It is intentionally permissive and returns an
+        empty list when no items are confidently found.
+        """
         import re
 
         items = []
-        
-        # Look for table-like structure with qty and price columns
-        for i, line in enumerate(lines):
-            # Pattern: item code, description, quantity, unit, price, total
-            item_pattern = r'(\d+)\s+(.+?)\s+(\d+(?:\.\d+)?)\s+(NOS|PCS|UNT|HR|M|KG|L)\s+(\d+(?:,\d{3})*(?:\.\d+)?)\s+(\d+(?:,\d{3})*(?:\.\d+)?)'
-            match = re.search(item_pattern, line, re.IGNORECASE)
-            
-            if match:
-                items.append({
-                    'description': match.group(2).strip(),
-                    'quantity': float(match.group(3)),
-                    'unit': match.group(4).upper(),
-                    'unit_price': self._parse_amount(match.group(5)),
-                    'total': self._parse_amount(match.group(6))
-                })
-        
-        # Fallback: if no items found, create a simple item with just description
-        if not items:
-            for line in lines:
-                if line and len(line) > 10 and not any(kw in line.lower() for kw in ['customer', 'date', 'invoice', 'total', 'vat']):
-                    # Check if line looks like an item description
-                    if re.search(r'[A-Za-z]{5,}', line):
-                        items.append({
-                            'description': line[:100],
-                            'quantity': 1,
-                            'unit': 'NOS'
-                        })
 
-        return items if items else None
+        # Helper to find all amounts in a line (handles commas)
+        amount_re = re.compile(r'(?:\d{1,3}(?:,\d{3})*|\d+)(?:\.\d{1,2})?')
+
+        for line in lines:
+            # Skip lines that are clearly header/meta
+            low = line.lower()
+            if any(kw in low for kw in ['customer', 'date', 'invoice', 'total', 'vat', 'subtotal', 'tel', 'fax', 'address']):
+                continue
+
+            # Find amounts
+            amounts = amount_re.findall(line)
+            if not amounts:
+                continue
+
+            # Choose last amount as total
+            total_str = amounts[-1]
+            total = self._parse_amount(total_str) or None
+
+            qty = None
+            unit_price = None
+
+            if len(amounts) >= 2:
+                # If there are at least two numbers, try to assign them
+                # Heuristic: if the second last is small integer -> qty
+                second_last = amounts[-2]
+                try:
+                    if '.' not in second_last and int(second_last) <= 1000:
+                        qty = int(second_last)
+                    else:
+                        unit_price = self._parse_amount(second_last)
+                except Exception:
+                    unit_price = self._parse_amount(second_last)
+
+            # Determine description by removing numbers and punctuation at end
+            # Trim trailing amounts/columns
+            desc = re.sub(r'\b' + re.escape(amounts[-1]) + r'\b\s*$', '', line).strip()
+            # remove any leading item codes like '1.' or '01'
+            desc = re.sub(r'^\d+\.?\s*', '', desc).strip()
+
+            if not desc or len(desc) < 3:
+                # fallback to whole line if description seems too short
+                desc = line.strip()
+
+            item = {
+                'description': desc[:255],
+                'quantity': qty or 1,
+                'unit': 'NOS',
+                'unit_price': unit_price or (total if qty == 1 else None),
+                'total': total
+            }
+
+            items.append(item)
+
+        # Do not return None; return empty list when nothing found
+        return items
 
     def _extract_amount(self, text_lower: str, keyword_pattern: str, strict=False) -> Decimal:
         """
