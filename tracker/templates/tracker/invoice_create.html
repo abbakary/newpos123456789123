@@ -702,7 +702,7 @@
                       extracted_description: d.description || ''
                     };
 
-                    fetch('{% url "tracker:api_create_invoice_from_extraction" %}', {
+                    fetch('#', { /* create-from-extraction endpoint removed */
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
                       body: JSON.stringify(payload)
