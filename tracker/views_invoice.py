@@ -109,10 +109,21 @@ def api_upload_extract_invoice(request):
         extracted = extract_from_bytes(file_bytes)
     except Exception as e:
         logger.error(f"Extractor error: {e}\n{traceback.format_exc()}")
-        return JsonResponse({'success': False, 'message': 'Extraction failed', 'error': str(e)})
+        return JsonResponse({
+            'success': False,
+            'message': 'Extraction failed',
+            'error': str(e),
+            'ocr_available': False
+        })
 
-    if extracted.get('error'):
-        return JsonResponse({'success': False, 'message': extracted.get('message', 'Extraction failed'), 'data': extracted})
+    # If extraction failed or OCR not available, return error but allow manual entry
+    if not extracted.get('success'):
+        return JsonResponse({
+            'success': False,
+            'message': extracted.get('message', 'Extraction failed. You can manually enter the invoice details.'),
+            'error': extracted.get('error'),
+            'ocr_available': extracted.get('ocr_available', False)
+        })
 
     header = extracted.get('header') or {}
     items = extracted.get('items') or []
