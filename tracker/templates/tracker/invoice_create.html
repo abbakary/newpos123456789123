@@ -564,7 +564,8 @@
                 const useBtn = null; // upload removed
                 const resetBtn = null; // upload removed
 
-                if (!area || !fileInput) return;
+                // Upload UI removed - short-circuit the upload handler
+                if (true) return;
                 // Expose existing order id to JS (used when creating invoice from extraction)
                 {% if order %}
                 window.EXISTING_ORDER_ID = {{ order.id }};
