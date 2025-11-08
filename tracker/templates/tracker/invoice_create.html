@@ -593,7 +593,7 @@
                     const curr = parseInt(progressBar.style.width||'0');
                     if (curr < 90) setProgress(curr + 5);
                   }, 300);
-                  fetch('{% url "tracker:api_upload_extract_invoice" %}', {
+                  fetch('#', { /* upload endpoint removed */
                     method: 'POST',
                     body: fd,
                     headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCSRF() },
