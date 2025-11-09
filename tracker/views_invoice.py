@@ -151,19 +151,41 @@ def api_upload_extract_invoice(request):
     # Determine customer to use
     customer_obj = None
 
-    # First, try to match customer by extracted name
-    cust_name = (header.get('customer_name') or '').strip()
-    if cust_name:
-        try:
-            customer_obj = Customer.objects.filter(branch=user_branch, full_name__iexact=cust_name).first()
-        except Exception:
-            pass
-
-    # If no match by name, use customer from selected order if available
-    if not customer_obj and selected_order:
+    # Priority 1: Use customer from selected order if available
+    if selected_order and selected_order.customer:
         customer_obj = selected_order.customer
 
-    # If still no customer, create temporary customer using plate if available
+    # Priority 2: Try to create/find customer using extracted data
+    if not customer_obj:
+        cust_name = (header.get('customer_name') or '').strip()
+        cust_phone = (header.get('phone') or '').strip()
+
+        if cust_name and cust_phone:
+            try:
+                # Try to find existing customer with extracted name and phone
+                customer_obj, created = CustomerService.create_or_get_customer(
+                    branch=user_branch,
+                    full_name=cust_name,
+                    phone=cust_phone,
+                    email=(header.get('email') or '').strip() or None,
+                    address=(header.get('address') or '').strip() or None,
+                    create_if_missing=True
+                )
+            except Exception as e:
+                logger.warning(f"Failed to create/get customer from extracted data: {e}")
+                customer_obj = None
+        elif cust_name:
+            # Only name available, try to find matching customer
+            try:
+                customer_obj = Customer.objects.filter(
+                    branch=user_branch,
+                    full_name__iexact=cust_name
+                ).first()
+            except Exception as e:
+                logger.warning(f"Failed to find customer by name: {e}")
+                customer_obj = None
+
+    # Priority 3: Create temporary customer using plate if available
     if not customer_obj and plate:
         try:
             temp_name = f"Plate {plate}"
@@ -180,12 +202,12 @@ def api_upload_extract_invoice(request):
             logger.warning(f"Failed to create temp customer for plate {plate}: {e}")
             customer_obj = None
 
-    # If still no customer_obj, require manual entry
+    # If still no customer, return extraction data for manual review
     if not customer_obj:
         logger.warning("No customer found for invoice upload. Extraction data returned for manual review.")
         return JsonResponse({
             'success': False,
-            'message': 'Customer not identified. Please manually select or create a customer and try again.',
+            'message': 'Could not identify customer from invoice or provided data. Please enter customer details manually.',
             'data': extracted,
             'ocr_available': extracted.get('ocr_available', False)
         })
