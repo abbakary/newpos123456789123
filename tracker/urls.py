@@ -8,6 +8,7 @@ from .views_api_fix import api_customer_groups_data_fixed
 from . import branch_metrics as views_branch
 from . import views_start_order
 from . import views_invoice
+from . import views_invoice_upload
 
 app_name = "tracker"
 
