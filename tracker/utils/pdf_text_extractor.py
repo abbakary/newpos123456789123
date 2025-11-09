@@ -230,7 +230,7 @@ def parse_invoice_data(text: str) -> dict:
     if customer_name and is_likely_address(customer_name) and not is_likely_customer_name(customer_name):
         customer_name = None
 
-    # Extract address (look for lines after "Address" label)
+    # Extract address (look for lines after "Address" label) - improved to handle multi-line addresses
     address = None
     for i, line in enumerate(cleaned_lines):
         if re.search(r'^Address\s*[:=]?', line, re.I):
@@ -238,21 +238,40 @@ def parse_invoice_data(text: str) -> dict:
             addr_parts = []
             m = re.search(r'^Address\s*[:=]?\s*(.+)$', line, re.I)
             if m:
-                addr_parts.append(m.group(1).strip())
-            # Collect next 2-3 lines as address continuation
-            for j in range(1, 4):
+                addr_val = m.group(1).strip()
+                # Only add if it's not empty and not another label
+                if addr_val and not re.match(r'^[A-Z]+[a-zA-Z\s]*\s*[:=]', addr_val):
+                    addr_parts.append(addr_val)
+
+            # Collect next 3-4 lines as address continuation
+            # Stop when we hit a clear label line or reach the end
+            for j in range(1, 5):
                 if i + j < len(cleaned_lines):
                     next_line = cleaned_lines[i + j]
-                    # Stop if it's a new label
-                    if re.match(r'^[A-Z]+[a-zA-Z\s]*\s*[:=]', next_line) or re.match(r'^(?:Tel|Fax|Del|Kind|Attended|Reference)', next_line, re.I):
+                    # Skip empty lines
+                    if not next_line.strip():
+                        continue
+
+                    # Stop if it's a clear new label (pattern: "Label :" or "Label =")
+                    if re.match(r'^[A-Z][a-zA-Z\s]*\s*[:=]', next_line, re.I):
                         break
-                    # Stop if it's an obviously different section (all caps, ends with colon)
-                    if next_line.isupper() and ':' in next_line:
+
+                    # Stop if it's a known field label
+                    if re.match(r'^(?:Tel|Telephone|Phone|Fax|Del\.|Ref|Date|PI|Kind|Attended|Type|Payment|Delivery|Reference)\b', next_line, re.I):
                         break
-                    addr_parts.append(next_line)
-            address = ' '.join(addr_parts)
-            if address:
-                break
+
+                    # This line is likely part of the address
+                    # Skip very long lines that might be from a different section
+                    if len(next_line) < 150:
+                        addr_parts.append(next_line)
+
+            # Join address parts with space or newline
+            if addr_parts:
+                address = ' '.join(addr_parts).strip()
+                # Clean up any trailing noise
+                address = re.sub(r'\s+(?:Tel|Fax|Del|Ref|Date|PI|Cust|Kind|Attended|Type|Payment|Delivery|Reference)\b.*$', '', address, flags=re.I).strip()
+                if address:
+                    break
 
     # Smart fix: If customer_name is empty but address looks like a name, swap them
     if not customer_name and address and is_likely_customer_name(address):
