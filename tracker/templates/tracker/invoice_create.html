@@ -692,20 +692,29 @@
                     const hdr = d.header;
                     const f = document.querySelector('form');
 
-                    // Map extracted header fields to form inputs
+                    // Comprehensive mapping of extracted fields to form field names
+                    // Maps extraction field names to form input names
                     const map = {
                       'customer_full_name': hdr.customer_name || '',
                       'customer_phone': hdr.phone || '',
                       'customer_email': hdr.email || '',
                       'customer_address': hdr.address || '',
-                      'reference': hdr.invoice_no || hdr.code_no || hdr.reference || ''
+                      'reference': hdr.reference || hdr.invoice_no || hdr.code_no || '',
+                      'attended_by': hdr.attended_by || '',
+                      'kind_attention': hdr.kind_attention || '',
+                      'remarks': hdr.remarks || '',
+                      'notes': hdr.remarks || '',
+                      'payment_method': hdr.payment_method || '',
+                      'delivery_terms': hdr.delivery_terms || ''
                     };
 
+                    // Apply mapped values to form fields
                     Object.keys(map).forEach(k=>{
                       const el = f.querySelector('[name="'+k+'"]');
                       if (el) {
                         el.value = map[k];
                         el.dispatchEvent(new Event('input', {bubbles: true}));
+                        el.dispatchEvent(new Event('change', {bubbles: true}));
                       }
                     });
 
@@ -713,7 +722,6 @@
                     if (hdr.date) {
                       const dateEl = f.querySelector('[name="invoice_date"]');
                       if (dateEl) {
-                        // Try to parse the date
                         let formattedDate = hdr.date;
                         // If date looks like dd/mm/yyyy, convert to yyyy-mm-dd
                         const dateMatch = hdr.date.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
@@ -722,6 +730,25 @@
                         }
                         dateEl.value = formattedDate;
                         dateEl.dispatchEvent(new Event('input', {bubbles: true}));
+                        dateEl.dispatchEvent(new Event('change', {bubbles: true}));
+                      }
+                    }
+
+                    // Handle tax_rate field if extracted
+                    if (hdr.tax) {
+                      const taxEl = f.querySelector('[name="tax_rate"]');
+                      if (taxEl) {
+                        // Extract percentage from tax field if it looks like "18.00%"
+                        let taxRate = hdr.tax;
+                        if (typeof taxRate === 'string') {
+                          const taxMatch = taxRate.match(/(\d+(?:\.\d+)?)/);
+                          if (taxMatch) {
+                            taxRate = taxMatch[1];
+                          }
+                        }
+                        taxEl.value = taxRate;
+                        taxEl.dispatchEvent(new Event('input', {bubbles: true}));
+                        taxEl.dispatchEvent(new Event('change', {bubbles: true}));
                       }
                     }
 
