@@ -697,11 +697,29 @@ def extract_from_bytes(file_bytes, filename: str = '') -> dict:
                 'subtotal': parsed.get('subtotal'),
                 'tax': parsed.get('tax'),
                 'total': parsed.get('total'),
+                'payment_method': parsed.get('payment_method'),
+                'delivery_terms': parsed.get('delivery_terms'),
+                'remarks': parsed.get('remarks'),
+                'attended_by': parsed.get('attended_by'),
+                'kind_attention': parsed.get('kind_attention'),
             }
+
+            # Format items with all extracted fields
+            items = []
+            for item in parsed.get('items', []):
+                items.append({
+                    'description': item.get('description', ''),
+                    'qty': item.get('qty', 1),
+                    'unit': item.get('unit'),
+                    'code': item.get('code'),
+                    'value': float(item.get('value', 0)) if item.get('value') else 0,
+                    'rate': float(item.get('rate', 0)) if item.get('rate') else None,
+                })
+
             return {
                 'success': True,
                 'header': header,
-                'items': parsed.get('items', []),
+                'items': items,
                 'raw_text': text,
                 'ocr_available': False,  # Using text extraction, not OCR
                 'message': 'Invoice data extracted successfully from PDF'
