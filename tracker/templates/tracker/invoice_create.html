@@ -271,26 +271,38 @@
               </div>
             </div>
 
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label">{{ form.reference.label }}</label>
-                {{ form.reference }}
-                {% if form.reference.errors %}<div class="text-danger f-12">{{ form.reference.errors|striptags }}</div>{% endif %}
+            <div class="card mb-3">
+              <div class="card-header bg-light">
+                <h6 class="mb-0">Invoice Information</h6>
               </div>
-              <div class="col-md-6">
-                <label class="form-label">{{ form.due_date.label }}</label>
-                {{ form.due_date }}
-                {% if form.due_date.errors %}<div class="text-danger f-12">{{ form.due_date.errors|striptags }}</div>{% endif %}
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">{{ form.attended_by.label|default:'Attended By' }}</label>
-                {{ form.attended_by }}
-                {% if form.attended_by.errors %}<div class="text-danger f-12">{{ form.attended_by.errors|striptags }}</div>{% endif %}
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">{{ form.kind_attention.label|default:'Kind Attn' }}</label>
-                {{ form.kind_attention }}
-                {% if form.kind_attention.errors %}<div class="text-danger f-12">{{ form.kind_attention.errors|striptags }}</div>{% endif %}
+              <div class="card-body">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label">{{ form.invoice_date.label|default:"Invoice Date" }}</label>
+                    {{ form.invoice_date }}
+                    {% if form.invoice_date.errors %}<div class="text-danger f-12">{{ form.invoice_date.errors|striptags }}</div>{% endif %}
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">{{ form.reference.label }}</label>
+                    {{ form.reference }}
+                    {% if form.reference.errors %}<div class="text-danger f-12">{{ form.reference.errors|striptags }}</div>{% endif %}
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">{{ form.due_date.label }}</label>
+                    {{ form.due_date }}
+                    {% if form.due_date.errors %}<div class="text-danger f-12">{{ form.due_date.errors|striptags }}</div>{% endif %}
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">{{ form.attended_by.label|default:'Attended By' }}</label>
+                    {{ form.attended_by }}
+                    {% if form.attended_by.errors %}<div class="text-danger f-12">{{ form.attended_by.errors|striptags }}</div>{% endif %}
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">{{ form.kind_attention.label|default:'Kind Attn' }}</label>
+                    {{ form.kind_attention }}
+                    {% if form.kind_attention.errors %}<div class="text-danger f-12">{{ form.kind_attention.errors|striptags }}</div>{% endif %}
+                  </div>
+                </div>
               </div>
             </div>
 
