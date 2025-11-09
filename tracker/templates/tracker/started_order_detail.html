@@ -161,31 +161,82 @@
 
                       <div id="uploadedInvoicePreview" style="display:none;" class="card mt-3">
                         <div class="card-header bg-light">
-                          <strong>Extracted Data Preview</strong>
+                          <strong><i class="fa fa-check-circle me-2 text-success"></i>Extracted Data Preview</strong>
                         </div>
-                        <div class="card-body">
-                          <div class="row mb-2">
-                            <div class="col-md-6">
-                              <small class="text-muted">Invoice Number</small>
-                              <p id="previewInvoiceNo" class="mb-2">-</p>
-                            </div>
-                            <div class="col-md-6">
-                              <small class="text-muted">Invoice Date</small>
-                              <p id="previewInvoiceDate" class="mb-2">-</p>
+                        <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                          <!-- Customer Information -->
+                          <div class="mb-3 pb-3 border-bottom">
+                            <h6 class="text-muted mb-2"><i class="fa fa-user me-2"></i>Customer Information</h6>
+                            <div class="row g-2">
+                              <div class="col-md-6">
+                                <small class="text-muted d-block">Name</small>
+                                <p id="previewCustomerName" class="mb-0">-</p>
+                              </div>
+                              <div class="col-md-6">
+                                <small class="text-muted d-block">Phone</small>
+                                <p id="previewCustomerPhone" class="mb-0">-</p>
+                              </div>
+                              <div class="col-md-6">
+                                <small class="text-muted d-block">Email</small>
+                                <p id="previewCustomerEmail" class="mb-0">-</p>
+                              </div>
+                              <div class="col-md-6">
+                                <small class="text-muted d-block">Address</small>
+                                <p id="previewCustomerAddress" class="mb-0">-</p>
+                              </div>
                             </div>
                           </div>
-                          <div class="row mb-2">
-                            <div class="col-md-12">
-                              <small class="text-muted">Total Amount</small>
-                              <p id="previewTotal" class="mb-2 fs-5"><strong>-</strong></p>
+
+                          <!-- Invoice Information -->
+                          <div class="mb-3 pb-3 border-bottom">
+                            <h6 class="text-muted mb-2"><i class="fa fa-file-invoice me-2"></i>Invoice Information</h6>
+                            <div class="row g-2">
+                              <div class="col-md-6">
+                                <small class="text-muted d-block">Invoice Number</small>
+                                <p id="previewInvoiceNo" class="mb-0"><strong>-</strong></p>
+                              </div>
+                              <div class="col-md-6">
+                                <small class="text-muted d-block">Invoice Date</small>
+                                <p id="previewInvoiceDate" class="mb-0"><strong>-</strong></p>
+                              </div>
                             </div>
                           </div>
-                          <button type="button" id="useExtractedDataBtn" class="btn btn-sm btn-success">
-                            <i class="fa fa-check me-2"></i>Use This Data
-                          </button>
-                          <button type="button" id="retryUploadBtn" class="btn btn-sm btn-secondary">
-                            <i class="fa fa-refresh me-2"></i>Try Different File
-                          </button>
+
+                          <!-- Line Items -->
+                          <div class="mb-3 pb-3 border-bottom">
+                            <h6 class="text-muted mb-2"><i class="fa fa-list me-2"></i>Line Items</h6>
+                            <div id="previewLineItems" class="small">
+                              <p class="text-muted">-</p>
+                            </div>
+                          </div>
+
+                          <!-- Payment Information -->
+                          <div class="mb-3">
+                            <h6 class="text-muted mb-2"><i class="fa fa-money me-2"></i>Payment Summary</h6>
+                            <div class="row g-2">
+                              <div class="col-md-6">
+                                <small class="text-muted d-block">Subtotal</small>
+                                <p id="previewSubtotal" class="mb-0">-</p>
+                              </div>
+                              <div class="col-md-6">
+                                <small class="text-muted d-block">Tax/VAT</small>
+                                <p id="previewTax" class="mb-0">-</p>
+                              </div>
+                              <div class="col-md-12">
+                                <small class="text-muted d-block">Total Amount</small>
+                                <p id="previewTotal" class="mb-0 fs-5"><strong>-</strong></p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="d-flex gap-2 mt-3">
+                            <button type="button" id="useExtractedDataBtn" class="btn btn-sm btn-success flex-grow-1">
+                              <i class="fa fa-check me-2"></i>Use This Data
+                            </button>
+                            <button type="button" id="retryUploadBtn" class="btn btn-sm btn-secondary flex-grow-1">
+                              <i class="fa fa-refresh me-2"></i>Try Different File
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
