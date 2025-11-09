@@ -316,17 +316,30 @@ def parse_invoice_data(text: str) -> dict:
 
     # Extract address - improved to handle multi-line addresses
     address = None
-    address_pattern = re.compile(r'Address\s*[:=]?\s*(.+?)(?=\n(?:Tel|Attended|Kind|Reference|PI|Code|Fax|Del\.|Remarks|NOTE|Payment|Delivery)\b|$)', re.I | re.MULTILINE | re.DOTALL)
+
+    # Pattern 1: Standard "Address:" format
+    address_pattern = re.compile(r'Address\s*[:=]?\s*(.+?)(?=\n(?:Tel|Attended|Kind|Reference|PI|Code|Fax|Del\.|Remarks|NOTE|Payment|Delivery|Email)\b|$)', re.I | re.MULTILINE | re.DOTALL)
     address_match = address_pattern.search(normalized_text)
 
     if address_match:
         address_text = address_match.group(1).strip()
         # Clean up the address text - remove trailing labels/keywords
-        address_text = re.sub(r'\s+(?:Tel|Phone|Fax|Attended|Kind|Reference|Ref\.|Date|PI|Code|Type|Payment|Delivery|Remarks|NOTE|Qty|Rate|Value)\b.*', '', address_text, flags=re.I).strip()
+        address_text = re.sub(r'\s+(?:Tel|Phone|Fax|Attended|Kind|Reference|Ref\.|Date|PI|Code|Type|Payment|Delivery|Remarks|NOTE|Qty|Rate|Value|Email|Customer)\b.*', '', address_text, flags=re.I).strip()
         # Keep newlines in address for readability (they're often multi-line)
         address_text = ' '.join(line.strip() for line in address_text.split('\n') if line.strip())
         if address_text and len(address_text) > 2:
             address = address_text
+
+    # Pattern 2: If not found, look for multi-line address after "Address" keyword
+    if not address:
+        m = re.search(r'Address\s+([A-Z][^\n]*(?:\n[A-Z][^\n]*){0,3})(?=\n(?:Tel|Attended|Kind|Phone|Email|Payment)|$)', normalized_text, re.I | re.MULTILINE)
+        if m:
+            address_text = m.group(1).strip()
+            # Clean up
+            address_text = re.sub(r'\s+(?:Tel|Phone|Fax|Email|Code|PI|Date)\b.*$', '', address_text, flags=re.I).strip()
+            address_text = ' '.join(line.strip() for line in address_text.split('\n') if line.strip())
+            if address_text and len(address_text) > 2:
+                address = address_text
 
     # Smart fix: If customer_name is empty but address looks like it contains the name
     # Try to split the address and extract name from first line
