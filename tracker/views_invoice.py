@@ -178,7 +178,20 @@ def api_upload_extract_invoice(request):
         cust_name = (header.get('customer_name') or '').strip()
         cust_phone = (header.get('phone') or '').strip()
 
-        if cust_name and cust_phone:
+        # Prefer composite identifier (name + plate) when available
+        if cust_name and plate:
+            try:
+                composite = CustomerService.find_customer_by_name_and_plate(
+                    branch=user_branch,
+                    full_name=cust_name,
+                    plate_number=plate,
+                )
+                if composite:
+                    customer_obj = composite
+            except Exception as e:
+                logger.warning(f"Composite name+plate lookup failed: {e}")
+
+        if not customer_obj and cust_name and cust_phone:
             try:
                 # Try to find existing customer with extracted name and phone
                 customer_obj, created = CustomerService.create_or_get_customer(
@@ -192,7 +205,7 @@ def api_upload_extract_invoice(request):
             except Exception as e:
                 logger.warning(f"Failed to create/get customer from extracted data: {e}")
                 customer_obj = None
-        elif cust_name:
+        elif not customer_obj and cust_name:
             # Only name available, try to find matching customer
             try:
                 customer_obj = Customer.objects.filter(
