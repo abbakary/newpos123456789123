@@ -1,10 +1,3 @@
-"""
-Simple OCR + regex-based invoice extractor using pytesseract and OpenCV.
-This is a pragmatic extractor intended for Phase-1: reasonably-structured invoices
-(like the Superdoll example). It returns a dict with header fields and a list of items.
-
-If pytesseract or OpenCV are not installed, falls back to regex-based extraction on plain text.
-"""
 from PIL import Image
 import io
 import re
@@ -80,7 +73,12 @@ def ocr_image(img_pil):
 
 
 def extract_header_fields(text):
-    """Extract header fields from invoice text with improved pattern matching"""
+    """Extract header fields from invoice text with improved pattern matching.
+
+    Additionally detects and strips a top-of-document seller/supplier block so seller
+    information isn't confused with customer fields in OCR-extracted text.
+    Returns seller fields as well when detected.
+    """
 
     # Helper to extract value after a label pattern
     def extract_field(label_pattern):
@@ -104,6 +102,47 @@ def extract_header_fields(text):
             return None
         return None
 
+    # Detect seller/supplier block at the top and remove it from text for subsequent parsing
+    seller_name = None
+    seller_address = None
+    seller_phone = None
+    seller_email = None
+    seller_tax_id = None
+    seller_vat_reg = None
+    try:
+        top_lines = [l.strip() for l in text.splitlines() if l.strip()][:8]
+        split_idx = None
+        for i, l in enumerate(top_lines):
+            if re.search(r'Proforma|Invoice\b|PI\b|Customer\b|Bill\s*To|Date\b|Customer\s*Reference|Invoice\s*No|Code', l, re.I):
+                split_idx = i
+                break
+        if split_idx is None:
+            split_idx = min(2, len(top_lines))
+        seller_lines = top_lines[:split_idx]
+        if seller_lines:
+            seller_name = seller_lines[0]
+            if len(seller_lines) > 1:
+                seller_address = ' '.join(seller_lines[1:])
+            seller_block_text = '\n'.join(seller_lines)
+            phone_match = re.search(r'(?:Tel\.?|Telephone|Phone)[:\s]*([\+\d][\d\s\-/\(\)\,]{4,}\d)', seller_block_text, re.I)
+            if phone_match:
+                seller_phone = phone_match.group(1).strip()
+            email_match = re.search(r'([\w\.-]+@[\w\.-]+\.\w+)', seller_block_text)
+            if email_match:
+                seller_email = email_match.group(1).strip()
+            tax_match = re.search(r'(?:Tax\s*ID|Tax\s*No\.?|Tax\s*Number)[:\s]*([A-Z0-9\-\/]*)', seller_block_text, re.I)
+            if tax_match:
+                seller_tax_id = tax_match.group(1).strip()
+            vat_match = re.search(r'(?:VAT\s*Reg\.?|VAT\s*No\.?|VAT)[:\s]*([A-Z0-9\-\/]*)', seller_block_text, re.I)
+            if vat_match:
+                seller_vat_reg = vat_match.group(1).strip()
+            try:
+                text = text.replace(seller_block_text, '', 1)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
     # Extract fields using label patterns
     invoice_no = extract_field(r'(?:PI\s*(?:No|Number)|Invoice\s*(?:No|Number))')
     code_no = extract_field(r'Code\s*(?:No|Number|#)')
@@ -119,17 +158,17 @@ def extract_header_fields(text):
 
     # Extract monetary amounts
     net = None
-    net_match = re.search(r'Net\s*(?:Value|Amount)\s*[:=\s]\s*([0-9\,\.]+)', text, re.I | re.MULTILINE)
+    net_match = re.search(r'Net\s*(?:Value|Amount)\s*[:=]\s*([0-9\,\.]+)', text, re.I | re.MULTILINE)
     if net_match:
         net = net_match.group(1)
 
     vat = None
-    vat_match = re.search(r'VAT\s*[:=\s]\s*([0-9\,\.]+)', text, re.I | re.MULTILINE)
+    vat_match = re.search(r'VAT\s*[:=]\s*([0-9\,\.]+)', text, re.I | re.MULTILINE)
     if vat_match:
         vat = vat_match.group(1)
 
     gross = None
-    gross_match = re.search(r'Gross\s*Value\s*[:=\s]*(?:TSH)?\s*([0-9\,\.]+)', text, re.I | re.MULTILINE)
+    gross_match = re.search(r'Gross\s*Value\s*[:=]\s*(?:TSH)?\s*([0-9\,\.]+)', text, re.I | re.MULTILINE)
     if gross_match:
         gross = gross_match.group(1)
 
@@ -145,6 +184,12 @@ def extract_header_fields(text):
         'net_value': to_decimal(net) if net else None,
         'vat': to_decimal(vat) if vat else None,
         'gross_value': to_decimal(gross) if gross else None,
+        'seller_name': seller_name,
+        'seller_address': seller_address,
+        'seller_phone': seller_phone,
+        'seller_email': seller_email,
+        'seller_tax_id': seller_tax_id,
+        'seller_vat_reg': seller_vat_reg,
     }
 
 
