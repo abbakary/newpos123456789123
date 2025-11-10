@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """
-Debug script to test extraction with the actual PDF content
+Debug script to test extraction with actual PDF content
+Tests both Superdoll invoices (T 964 DNA and T 290 EFQ)
 """
 
 import sys
@@ -9,8 +10,82 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from tracker.utils.pdf_text_extractor import parse_invoice_data
 
-# Sample extracted text from the user's provided PDF
-sample_text = """Superdoll Trailer Manufacture Co. (T) Ltd.
+# Test 1: Superdoll Invoice T 964 DNA (single line item)
+superdoll_t964_text = """Superdoll Trailer Manufacture Co. (T) Ltd.
+P.O. Box 16541 DSM, Tel.+255-22-2860930-2863467, Fax +255-22-2865412/3, Email: stm@superdoll-tz.com,Tax ID No.100-199-157, VAT Reg. No.10-0085-15-E
+P.O.BOX 2517
+A01218
+27/10/2025
+PI-1765684
+STEERING AXLE
+ALIGNMENT
+1 41003
+NOS
+Sr
+No.
+Item Code Description
+2180007/2861940
+Proforma Invoice
+Code No
+Customer Name SAID SALIM BAKHRESA CO LTD
+Address
+Tel Fax
+Del. Date
+PI No.
+Date
+Cust Ref
+Ref Date
+Authorised Signatory
+27/10/2025
+DAR-ES-SALAAM
+TANZANIA
+1
+Qty
+Kind Attn Valued Customer
+Reference
+ 100,000.00
+Rate
+ 100,000.00
+Value
+Payment
+Delivery
+Net Value
+Type
+ 100,000.00
+ex-stock
+Cash/Chq on Delivery
+Attended By Sales Point
+Remarks Looking forward to your conformed order
+TSH TSH
+Gross Value
+VAT 18,000.00
+TSH 118,000.00
+:
+:
+:
+: :
+:
+:
+:
+:
+:
+:
+:
+:
+Dear Sir/Madam,
+We thank you for your valued enquiry. As desired please find below our detailed best offer
+:
+:
+:
+:
+:
+:
+FOR T 964 DNA
+4 : Duty and VAT exemption documents to be submitted with the Purchase Order. FRM-STM-SAL-01A
+Page 1 of 1"""
+
+# Test 2: Superdoll Invoice T 290 EFQ (multiple line items)
+superdoll_t290_text = """Superdoll Trailer Manufacture Co. (T) Ltd.
 P.O. Box 16541 DSM, Tel.+255-22-2860930-2863467, Fax +255-22-2865412/3, Email: stm@superdoll-tz.com,Tax ID No.100-199-157, VAT Reg. No.10-0085-15-E
 P.O. BOX 15950
 A01696
